@@ -22,13 +22,11 @@ services:
     extra_hosts:
       - host.docker.internal:host-gateway
     ports:
-      - "${NETWORK_HOST:-10.5.0.1}:${APP_PORT:-8000}:6379"
+      - "${NETWORK_HOST:-10.5.0.1}:${APP_PORT:-8000}:8000" # APP Management API
+      - "${NETWORK_HOST:-10.5.0.1}:${REVERB_SERVER_PORT}:${REVERB_SERVER_PORT}" # Reverb websocket
     working_dir: /var/www
     command:
-      - php
-      - artisan
-      - websocket:start
-      - --debug
+      - ./deploy/bootstrap.sh
     networks:
       websocket-network:
     restart: unless-stopped
@@ -45,12 +43,12 @@ services:
     ports:
       - '${NETWORK_HOST:-10.5.0.1}:${FORWARD_DB_PORT:-5432}:5432'
     environment:
-      POSTGRESQL_DATABASE: '${DB_DATABASE}'
-      POSTGRESQL_USERNAME: '${DB_USERNAME}'
+      POSTGRESQL_DATABASE: '${DB_DATABASE:-websocket}'
+      POSTGRESQL_USERNAME: '${DB_USERNAME:-websocket}'
       POSTGRESQL_PASSWORD: '${DB_PASSWORD:-secret}'
-      POSTGRESQL_POSTGRES_PASSWORD: '${DB_ROOT_PASSWORD}'
-      POSTGRESQL_LOG_HOSTNAME: true
-      POSTGRESQL_LOG_CONNECTIONS: true
+      POSTGRESQL_POSTGRES_PASSWORD: '${DB_ROOT_PASSWORD:-superSecret}'
+      POSTGRESQL_LOG_HOSTNAME: false
+      POSTGRESQL_LOG_CONNECTIONS: false
     volumes:
       - postgresql:/bitnami/postgresql
     networks:
