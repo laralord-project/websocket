@@ -1,0 +1,92 @@
+services:
+  websocket:
+    build:
+      dockerfile: deploy/php/app.dockerfile
+      target: dev
+      context: ./
+    user: "${UID:-1000}:${GID:-1000}"
+    labels:
+      - role=websocket
+    environment:
+      XDEBUG_CONFIG: "client_host=host.docker.internal client_port=${XDEBUG_PORT:-9005} idekey=${XDEBUG_IDE_KEY:-none} log=/dev/stderr"
+      XDEBUG_MODE: ${XDEBUG_MODE:-off}
+      XDEBUG_CLIENT_HOST: host.docker.internal
+      APP_BASE_PATH: /var/www
+      SERVER_ENV_FILE: /secrets/.server.env
+      SERVER_WATCH: true
+      SERVER_WATCH_TARGET: /secrets/.server.env
+    volumes:
+      - ./:/var/www:delegated
+      - ./deploy/bootstrap.sh:/usr/bin/bootstrap
+      - ./.env.server:/secrets/.server.env
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    ports:
+      - "${NETWORK_HOST:-10.5.0.1}:${APP_PORT:-8000}:6379"
+    working_dir: /var/www
+    command:
+      - php
+      - artisan
+      - websocket:start
+      - --debug
+    networks:
+      websocket-network:
+    restart: unless-stopped
+    healthcheck:
+      test: "nc -z localhost 8000 && nc -z localhost 8080 && echo 'Connected' || (echo 'Failed' && exit 1)"
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  postgresql:
+    image: 'bitnami/postgresql:16.4.0'
+    hostname: postgresql
+    restart: unless-stopped
+    ports:
+      - '${NETWORK_HOST:-10.5.0.1}:${FORWARD_DB_PORT:-5432}:5432'
+    environment:
+      POSTGRESQL_DATABASE: '${DB_DATABASE}'
+      POSTGRESQL_USERNAME: '${DB_USERNAME}'
+      POSTGRESQL_PASSWORD: '${DB_PASSWORD:-secret}'
+      POSTGRESQL_POSTGRES_PASSWORD: '${DB_ROOT_PASSWORD}'
+      POSTGRESQL_LOG_HOSTNAME: true
+      POSTGRESQL_LOG_CONNECTIONS: true
+    volumes:
+      - postgresql:/bitnami/postgresql
+    networks:
+      - websocket-network
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-q", "-d", "${DB_DATABASE}", "-U", "${DB_USERNAME}" ]
+      retries: 3
+      timeout: 5s
+
+  redis:
+    image: 'valkey/valkey:8-alpine3.20'
+    hostname: broker-redis
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-secret}
+    ports:
+      - "${NETWORK_HOST:-10.5.0.1}:${FORWARD_REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis:/data
+    networks:
+      - websocket-network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      retries: 3
+      timeout: 5s
+
+
+volumes:
+  redis:
+  postgresql:
+
+networks:
+  websocket-network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.host_binding_ipv4: "${NETWORK_HOST:-10.5.0.1}"
+    ipam:
+      config:
+        - subnet: "${NETWORK_SUBNET:-10.5.0.0/16}"

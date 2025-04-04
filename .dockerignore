@@ -1,0 +1,12 @@
+vendor
+.idea
+data
+.env
+.env.proxy
+.env.server
+info
+node_modules
+.git
+public/build
+.phpunit.result.cache
+bootstrap/cache

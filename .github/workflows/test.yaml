@@ -1,0 +1,72 @@
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+name: Tests
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 10
+          token: ${{ steps.app-token.outputs.token }}
+          # Make sure the value of GITHUB_TOKEN will not be persisted in repo's config
+          persist-credentials: false
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 100
+
+      - name: Setup cache environment
+        id: extcache
+        uses: shivammathur/cache-extensions@v1
+        with:
+          php-version: 8.2
+          extensions: inotify, apcu, sysvmsg, pcntl, openswoole-25.2.0, redis
+          key: php-ext-key-1
+
+      - name: Cache extensions
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.extcache.outputs.dir }}
+          key: ${{ steps.extcache.outputs.key }}
+          restore-keys: ${{ steps.extcache.outputs.key }}
+
+      - name: Set Up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.2
+          ini-values: variables_order=EGPCS
+          extensions: inotify, apcu, sysvmsg, pcntl, openswoole-25.2.0, redis
+          tools: composer, phpunit,
+
+      - name: Install Composer Dependencies
+        run: composer install && composer bin box install
+
+      - name: Unit tests
+        run: phpunit
+
+      - name: Git describe
+        id: ghd
+        uses: proudust/gh-describe@v2
+
+      - name: Build test
+        run: |
+          echo "Building PHAR: $APP_VERSION"
+          ./vendor/bin/box compile  --no-parallel
+        env:
+          APP_VERSION: ${{ steps.ghd.outputs.describe }}

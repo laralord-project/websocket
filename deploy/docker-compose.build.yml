@@ -1,0 +1,14 @@
+services:
+  app:
+    image: ${CI_REGISTRY_IMAGE:-websocket-local}/app:${APP_VERSION:-0.1.0-local}
+    build:
+      dockerfile: ./deploy/php/app.dockerfile
+      context: ..
+      target: build
+      args:
+        - "APP_VERSION=${APP_VERSION:-0.1.0-local}"
+
+  app-latest:
+    extends:
+      service: app
+    image: ${CI_REGISTRY_IMAGE:-websocket-local}/app:latest

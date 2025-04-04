@@ -1,0 +1,47 @@
+services:
+  test:
+    build:
+      dockerfile: deploy/php/app.dockerfile
+      target: dev
+      context: ./
+    user: "www"
+    entrypoint: "bash"
+    command:
+      - "test"
+    networks:
+      - test
+    depends_on:
+      database-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+
+  database-test:
+    image: 'bitnami/postgresql:latest'
+    environment:
+      POSTGRESQL_DATABASE: '${DB_DATABASE}'
+      POSTGRESQL_USERNAME: '${DB_USERNAME}'
+      POSTGRESQL_PASSWORD: '${DB_PASSWORD:-secret}'
+      POSTGRESQL_POSTGRES_PASSWORD: '${DB_ROOT_PASSWORD}'
+      POSTGRESQL_LOG_HOSTNAME: true
+      POSTGRESQL_LOG_CONNECTIONS: true
+    networks:
+      - test
+    healthcheck:
+      test: ["CMD", "pg_isready", "-q", "-d", "${DB_DATABASE}", "-U", "${DB_USERNAME}"]
+      retries: 3
+      timeout: 5s
+
+  redis-test:
+    image: 'redis:7.2.1-alpine'
+    hostname: redis-test
+    networks:
+      - test
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      retries: 3
+      timeout: 5s
+
+
+networks:
+  test:

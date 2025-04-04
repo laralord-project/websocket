@@ -1,0 +1,14 @@
+vendor
+.idea
+.env
+.env.proxy
+_ide_helper.php
+./.phpunit.result.cache
+deploy/mysql/data/*
+info
+/.phpunit.result.cache
+/node_modules/
+rr
+.rr.yaml
+./public/build
+/.env.server
