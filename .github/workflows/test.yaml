@@ -40,75 +40,75 @@ jobs:
     outputs:
       app_version: ${{ env.APP_VERSION }}
 
-test:
-  runs-on: ubuntu-latest
-  needs: app-version
-  services:
-    postgres:
-      image: postgres:15.8-alpine
-      env:
-        POSTGRES_DB: websocket-test
-        POSTGRES_USER: test
-        POSTGRES_PASSWORD: secret
-      ports:
-        - 5432:5432
-      options: --health-cmd "pg_isready -U test" --health-interval 10s --health-timeout 5s --health-retries 5
-    redis:
-      image: redis:alpine
-      ports:
-        - 6379:6379
-      options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
-  env:
-    APP_ENV: testing
-    DB_HOST: 127.0.0.1
-    REDIS_HOST: 127.0.0.1
-    APP_VERSION: ${{ needs.app-version.outputs.app_version }}
-  steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-
-    - name: Set up PHP
-      uses: shivammathur/setup-php@v2
-      with:
-        php-version: '8.1'
-
-    - name: Install dependencies
-      run: composer install --no-progress
-
-    - name: Wait for services
-      run: |
-        until nc -z 127.0.0.1 5432; do echo "Waiting for PostgreSQL..."; sleep 1; done
-        until nc -z 127.0.0.1 6379; do echo "Waiting for Redis..."; sleep 1; done
-
-    - name: Run tests
-      run: |
-        echo "Test v${APP_VERSION}"
-        php artisan migrate --seed
-        php artisan test
-
-
-  build-docker-image:
+  test:
     runs-on: ubuntu-latest
-    needs: [app-version, test]
-    if: github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main')
+    needs: app-version
+    services:
+      postgres:
+        image: postgres:15.8-alpine
+        env:
+          POSTGRES_DB: websocket-test
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: secret
+        ports:
+          - 5432:5432
+        options: --health-cmd "pg_isready -U test" --health-interval 10s --health-timeout 5s --health-retries 5
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379:6379
+        options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      APP_ENV: testing
+      DB_HOST: 127.0.0.1
+      REDIS_HOST: 127.0.0.1
+      APP_VERSION: ${{ needs.app-version.outputs.app_version }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Log in to Docker registry
-        uses: docker/login-action@v2
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
         with:
-          registry: ${{ secrets.DOCKER_REGISTRY }}
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          php-version: '8.1'
 
-      - name: Build and push Docker image
-        env:
-          APP_VERSION: ${{ needs.app-version.outputs.app_version }}
+      - name: Install dependencies
+        run: composer install --no-progress
+
+      - name: Wait for services
         run: |
-          echo "Building $APP_VERSION"
-          docker compose -f ./deploy/docker-compose.build.yml build app
-          docker compose -f ./deploy/docker-compose.build.yml push app --quiet
+          until nc -z 127.0.0.1 5432; do echo "Waiting for PostgreSQL..."; sleep 1; done
+          until nc -z 127.0.0.1 6379; do echo "Waiting for Redis..."; sleep 1; done
+
+      - name: Run tests
+        run: |
+          echo "Test v${APP_VERSION}"
+          php artisan migrate --seed
+          php artisan test
+  
+
+    build-docker-image:
+      runs-on: ubuntu-latest
+      needs: [app-version, test]
+      if: github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main')
+      steps:
+        - name: Checkout code
+          uses: actions/checkout@v3
+
+        - name: Set up Docker Buildx
+          uses: docker/setup-buildx-action@v2
+
+        - name: Log in to Docker registry
+          uses: docker/login-action@v2
+          with:
+            registry: ${{ secrets.DOCKER_REGISTRY }}
+            username: ${{ secrets.DOCKER_USERNAME }}
+            password: ${{ secrets.DOCKER_PASSWORD }}
+
+        - name: Build and push Docker image
+          env:
+            APP_VERSION: ${{ needs.app-version.outputs.app_version }}
+          run: |
+            echo "Building $APP_VERSION"
+            docker compose -f ./deploy/docker-compose.build.yml build app
+            docker compose -f ./deploy/docker-compose.build.yml push app --quiet
