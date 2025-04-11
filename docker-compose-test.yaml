@@ -5,6 +5,8 @@ services:
       target: dev
       context: ./
     user: "www"
+    environment:
+      APP_ENV: testing
     entrypoint: "bash"
     command:
       - "test"
@@ -19,10 +21,9 @@ services:
   database-test:
     image: 'bitnami/postgresql:latest'
     environment:
-      POSTGRESQL_DATABASE: '${DB_DATABASE}'
-      POSTGRESQL_USERNAME: '${DB_USERNAME}'
-      POSTGRESQL_PASSWORD: '${DB_PASSWORD:-secret}'
-      POSTGRESQL_POSTGRES_PASSWORD: '${DB_ROOT_PASSWORD}'
+      POSTGRESQL_DATABASE: websocket-test
+      POSTGRESQL_USERNAME: test
+      POSTGRESQL_PASSWORD: secret
       POSTGRESQL_LOG_HOSTNAME: true
       POSTGRESQL_LOG_CONNECTIONS: true
     networks:
