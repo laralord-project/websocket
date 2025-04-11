@@ -1,6 +1,6 @@
 services:
   app:
-    image: ${CI_REGISTRY_IMAGE:-websocket-local}/app:${APP_VERSION:-0.1.0-local}
+    image: ${CI_REGISTRY_IMAGE:-laralordproject}/websocket:${APP_VERSION:-0.1.0-local}
     build:
       dockerfile: ./deploy/php/app.dockerfile
       context: ..
@@ -11,4 +11,4 @@ services:
   app-latest:
     extends:
       service: app
-    image: ${CI_REGISTRY_IMAGE:-websocket-local}/app:latest
+    image: ${CI_REGISTRY_IMAGE:-laralordproject}/websocket:latest
