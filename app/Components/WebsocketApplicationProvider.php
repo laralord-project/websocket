@@ -4,13 +4,12 @@ namespace App\Components;
 
 use App\Models\WebsocketApp;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Crypt;
 use Laravel\Reverb\Application;
 use Laravel\Reverb\Contracts\ApplicationProvider;
 
 class WebsocketApplicationProvider implements ApplicationProvider
 {
-    const APP_PROVIDER_NAME='database';
+    const APP_PROVIDER_NAME = 'database';
 
     /**
      * @inheritDoc
