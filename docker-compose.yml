@@ -17,7 +17,6 @@ services:
       SERVER_WATCH_TARGET: /secrets/.server.env
     volumes:
       - ./:/var/www:delegated
-      - ./deploy/bootstrap.sh:/usr/bin/bootstrap
       - ./.env.server:/secrets/.server.env
     extra_hosts:
       - host.docker.internal:host-gateway
@@ -25,6 +24,11 @@ services:
       - "${NETWORK_HOST:-10.5.0.1}:${APP_PORT:-8000}:8000" # APP Management API
       - "${NETWORK_HOST:-10.5.0.1}:${REVERB_SERVER_PORT}:${REVERB_SERVER_PORT}" # Reverb websocket
     working_dir: /var/www
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     command:
       - ./deploy/bootstrap.sh
     networks:
@@ -74,7 +78,6 @@ services:
       test: [ "CMD", "redis-cli", "ping" ]
       retries: 3
       timeout: 5s
-
 
 volumes:
   redis:

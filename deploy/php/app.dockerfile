@@ -1,5 +1,5 @@
 
-FROM laralordproject/server:v0.1.2-rc13 AS dev
+FROM laralordproject/server:0.1.2 AS dev
 
 ARG APP_VERSION
 ENV APP_VERSION "${APP_VERSION}"
